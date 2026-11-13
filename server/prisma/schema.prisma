@@ -1,0 +1,195 @@
+// UniCore ERP — Production Prisma Database Schema
+// Handles Academic, Financial, HR, and Administrative relations
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STUDENT
+  FACULTY
+  ADMIN
+  PARENT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  ON_DUTY
+  LATE
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(STUDENT)
+  avatar    String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  studentProfile StudentProfile?
+  facultyProfile FacultyProfile?
+  notifications  Notification[]
+  leaveRequests  LeaveRequest[]
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  hodId     String?
+  createdAt DateTime @default(now())
+
+  students StudentProfile[]
+  faculty  FacultyProfile[]
+  courses  Course[]
+}
+
+model StudentProfile {
+  id           String      @id @default(uuid())
+  userId       String      @unique
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  regNo        String      @unique
+  departmentId String
+  department   Department  @relation(fields: [departmentId], references: [id])
+  year         Int         @default(1)
+  section      String      @default("A")
+  cgpa         Float       @default(0.0)
+  attendance   Float       @default(100.0)
+  parentId     String?
+
+  attendanceRecords AttendanceRecord[]
+  examResults       ExamResult[]
+  feePayments       FeePayment[]
+  documentRequests  DocumentRequest[]
+}
+
+model FacultyProfile {
+  id           String     @id @default(uuid())
+  userId       String     @unique
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  designation  String
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  experience   Int        @default(0)
+  courses      Course[]
+}
+
+model Course {
+  id           String     @id @default(uuid())
+  code         String     @unique
+  title        String
+  credits      Int        @default(3)
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  facultyId    String?
+  faculty      FacultyProfile? @relation(fields: [facultyId], references: [id])
+
+  attendanceRecords AttendanceRecord[]
+  examSchedules     ExamSchedule[]
+  examResults       ExamResult[]
+}
+
+model AttendanceRecord {
+  id        String           @id @default(uuid())
+  studentId String
+  student   StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course           @relation(fields: [courseId], references: [id])
+  date      DateTime         @default(now())
+  status    AttendanceStatus @default(PRESENT)
+}
+
+model ExamSchedule {
+  id        String   @id @default(uuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+  examDate  DateTime
+  duration  String   @default("3 hrs")
+  venue     String
+  examType  String   @default("End Semester")
+}
+
+model ExamResult {
+  id        String         @id @default(uuid())
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course         @relation(fields: [courseId], references: [id])
+  internal  Float          @default(0)
+  external  Float          @default(0)
+  total     Float          @default(0)
+  grade     String         @default("A")
+  result    String         @default("Pass")
+}
+
+model FeePayment {
+  id          String         @id @default(uuid())
+  studentId   String
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  amount      Float
+  category    String
+  status      PaymentStatus  @default(PENDING)
+  txRef       String?        @unique
+  paymentMode String?
+  paidAt      DateTime?
+  createdAt   DateTime       @default(now())
+}
+
+model LeaveRequest {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leaveType   String
+  fromDate    DateTime
+  toDate      DateTime
+  days        Int         @default(1)
+  reason      String
+  status      LeaveStatus @default(PENDING)
+  reviewedBy  String?
+  documentUrl String?
+  createdAt   DateTime    @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("info")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model DocumentRequest {
+  id           String         @id @default(uuid())
+  studentId    String
+  student      StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  documentType String
+  purpose      String
+  status       String         @default("Processing")
+  trackingRef  String         @unique
+  fileUrl      String?
+  createdAt    DateTime       @default(now())
+}

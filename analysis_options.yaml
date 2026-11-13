@@ -1,0 +1,11 @@
+analyzer:
+  exclude:
+    - "node_modules/**"
+    - "server/**"
+    - "dist/**"
+    - "android/**"
+    - "ios/**"
+    - "build/**"
+    - "**/.dart_tool/**"
+  errors:
+    deprecated_member_use: ignore

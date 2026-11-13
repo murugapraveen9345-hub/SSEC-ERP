@@ -1,0 +1,9 @@
+dist
+node_modules
+android
+ios
+mobile
+campus_connect_app
+ai
+server/node_modules
+.eslintrc.cjs
