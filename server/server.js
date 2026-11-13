@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import { verifyToken, requireRole } from './middleware/auth.js';
+import adminRoutes from './routes/admin.js';
 
 dotenv.config();
 
@@ -12,6 +13,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'unicore-super-secret-jwt-key-2026'
 
 app.use(cors());
 app.use(express.json());
+
+// Mount Modular API Routes
+app.use('/api/admin', adminRoutes);
 
 // In-memory demo data store for standalone testing
 const users = [

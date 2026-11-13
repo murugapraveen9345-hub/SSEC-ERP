@@ -36,21 +36,30 @@ enum PaymentStatus {
   FAILED
 }
 
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  SUSPENDED
+}
+
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
+  id        String     @id @default(uuid())
+  email     String     @unique
   password  String
   name      String
-  role      Role     @default(STUDENT)
+  role      Role       @default(STUDENT)
+  status    UserStatus @default(ACTIVE)
   avatar    String?
   phone     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   studentProfile StudentProfile?
   facultyProfile FacultyProfile?
+  staffProfile   StaffProfile?
   notifications  Notification[]
   leaveRequests  LeaveRequest[]
+  auditLogs      AuditLog[]
 }
 
 model Department {
@@ -62,6 +71,7 @@ model Department {
 
   students StudentProfile[]
   faculty  FacultyProfile[]
+  staff    StaffProfile[]
   courses  Course[]
 }
 
@@ -85,14 +95,26 @@ model StudentProfile {
 }
 
 model FacultyProfile {
-  id           String     @id @default(uuid())
-  userId       String     @unique
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  designation  String
-  departmentId String
-  department   Department @relation(fields: [departmentId], references: [id])
-  experience   Int        @default(0)
-  courses      Course[]
+  id            String     @id @default(uuid())
+  userId        String     @unique
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  designation   String
+  departmentId  String
+  department    Department @relation(fields: [departmentId], references: [id])
+  experience    Int        @default(0)
+  workloadHours Int        @default(16)
+  isHod         Boolean    @default(false)
+  isMentor      Boolean    @default(false)
+  courses       Course[]
+}
+
+model StaffProfile {
+  id           String      @id @default(uuid())
+  userId       String      @unique
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleTitle    String      // e.g. "Lab Assistant", "Accounts Officer", "Librarian"
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
 }
 
 model Course {
@@ -193,3 +215,73 @@ model DocumentRequest {
   fileUrl      String?
   createdAt    DateTime       @default(now())
 }
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      String   // e.g. "STUDENT_BLOCKED", "TIMETABLE_PUBLISHED", "GRADE_LOCKED", "LOGIN"
+  entity      String   // e.g. "User", "Timetable", "ExamResult", "Fee"
+  entityId    String?
+  details     String?  // JSON formatted details or description
+  ipAddress   String?  @default("127.0.0.1")
+  createdAt   DateTime @default(now())
+}
+
+model FeeCategory {
+  id          String   @id @default(uuid())
+  name        String   // "Tuition Fee", "Bus Fee", "Hostel Fee", "Mess Fee"
+  amount      Float
+  academicYear String  @default("2026-2027")
+  dueDate     DateTime
+  finePerDay  Float    @default(50.0)
+  createdAt   DateTime @default(now())
+}
+
+model TimetableSlot {
+  id           String   @id @default(uuid())
+  departmentId String
+  year         Int      @default(1)
+  section      String   @default("A")
+  dayOfWeek    String   // "Monday", "Tuesday", etc.
+  period       Int      // 1 to 7
+  courseCode   String
+  facultyName  String
+  roomNumber   String
+  isLab        Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
+
+model PlacementDrive {
+  id             String   @id @default(uuid())
+  companyName    String
+  role           String
+  packageLpa     Float
+  driveDate      DateTime
+  minCgpa        Float    @default(6.5)
+  allowedDepts   String   // comma-separated "CSE,IT,ECE"
+  maxBacklogs    Int      @default(0)
+  venue          String   @default("Campus Auditorium")
+  status         String   @default("UPCOMING") // "UPCOMING", "ONGOING", "COMPLETED"
+  eligibleCount  Int      @default(0)
+  createdAt      DateTime @default(now())
+}
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  category  String   @default("GENERAL") // "ACADEMIC", "SECURITY", "NOTIFICATION"
+  updatedAt DateTime @updatedAt
+}
+
+model RbacPermission {
+  id        String   @id @default(uuid())
+  role      Role
+  module    String   // "STUDENTS", "FACULTY", "TIMETABLE", "FEES", "EXAMS", "PLACEMENTS", "AUDIT"
+  canRead   Boolean  @default(false)
+  canWrite  Boolean  @default(false)
+  canDelete Boolean  @default(false)
+  canApprove Boolean @default(false)
+}
+
