@@ -12,9 +12,10 @@ import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement,
   LineElement, BarElement, ArcElement, Tooltip, Legend, Filler
 } from "chart.js";
-import { Line, Doughnut, Bar } from "react-chartjs-2";
+import { Line, Doughnut } from "react-chartjs-2";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
+import { useCampusData } from "../../context/CampusDataContext";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend, Filler);
 
@@ -23,10 +24,22 @@ export default function StudentDashboard() {
   const { isDark } = useTheme();
   const navigate = useNavigate();
 
+  // Shared Campus Context State
+  const {
+    leaves,
+    feeRecord,
+    materials,
+    assignments,
+    drives,
+    applyLeave,
+    payFees,
+    applyToDrive,
+  } = useCampusData();
+
   // Active Navigation Tab
   const [activeTab, setActiveTab] = useState("overview"); // 'overview' | 'academics' | 'requests_fees' | 'placement_ai'
 
-  // ── 1. Academic Overview Data ──
+  // Student Profile
   const studentProfile = {
     name: user?.name || "Arjun Sharma",
     regNo: "730422104001",
@@ -35,24 +48,21 @@ export default function StudentDashboard() {
     semester: "Semester 5",
     section: "A",
     cgpa: 8.72,
-    mentor: "Dr. Suresh Kumar (Assoc. Prof)",
+    mentor: "Dr. Suresh Kumar (Assoc. Professor)",
     mentorPhone: "+91 94440 12346",
-    backlogs: 0,
   };
 
-  const [attendanceStats] = useState({
+  const attendanceStats = {
     overall: 82.6,
     threshold: 75.0,
-    totalConducted: 240,
-    totalAttended: 198,
     subjects: [
-      { code: "CS8501", name: "Theory of Computation", attended: 38, total: 46, pct: 82.6, status: "GOOD" },
-      { code: "CS8502", name: "Database Management Systems", attended: 40, total: 44, pct: 90.9, status: "EXCELLENT" },
-      { code: "CS8503", name: "Computer Networks", attended: 28, total: 38, pct: 73.7, status: "WARNING" }, // <75%
-      { code: "CS8511", name: "DBMS Laboratory", attended: 22, total: 24, pct: 91.7, status: "EXCELLENT" },
-      { code: "MA8551", name: "Algebra & Number Theory", attended: 35, total: 44, pct: 79.5, status: "GOOD" },
+      { code: "CS8501", name: "Theory of Computation", attended: 38, total: 46, pct: 82.6 },
+      { code: "CS8502", name: "Database Management Systems", attended: 40, total: 44, pct: 90.9 },
+      { code: "CS8503", name: "Computer Networks", attended: 28, total: 38, pct: 73.7 }, // <75%
+      { code: "CS8511", name: "DBMS Laboratory", attended: 22, total: 24, pct: 91.7 },
+      { code: "MA8551", name: "Algebra & Number Theory", attended: 35, total: 44, pct: 79.5 },
     ],
-  });
+  };
 
   const todaySchedule = [
     { period: 1, time: "09:00 - 09:50 AM", subject: "CS8501 Theory of Computation", room: "LH-301", faculty: "Dr. Suresh Kumar", status: "COMPLETED" },
@@ -61,7 +71,6 @@ export default function StudentDashboard() {
     { period: 4, time: "11:45 - 12:35 PM", subject: "CS8511 DBMS Laboratory", room: "LAB-03", faculty: "Prof. Anitha", status: "UPCOMING" },
   ];
 
-  // ── 2. Exams & Academics Data ──
   const semesterGpa = [
     { sem: "Sem 1", gpa: 8.4 },
     { sem: "Sem 2", gpa: 8.6 },
@@ -76,59 +85,45 @@ export default function StudentDashboard() {
     { code: "CS8503", subject: "Computer Networks", date: "Nov 28, 2026", session: "FN (10:00 AM - 01:00 PM)", venue: "Exam Hall B-201" },
   ];
 
-  const learningMaterials = [
-    { id: "MAT1", title: "Unit 3 - Pushdown Automata Lecture Notes", subject: "CS8501", by: "Dr. Suresh Kumar", size: "4.2 MB", date: "Nov 10" },
-    { id: "MAT2", title: "DBMS SQL & Normalization Comprehensive Question Bank", subject: "CS8502", by: "Dr. Priya Lakshmi", size: "2.1 MB", date: "Nov 08" },
-    { id: "MAT3", title: "Lab Manual Exercise 1 to 10 with Solutions", subject: "CS8511", by: "Prof. Anitha", size: "5.0 MB", date: "Nov 04" },
+  const aiStudyPlan = [
+    { day: "Today (Evening)", subject: "CS8503 Computer Networks", topic: "TCP Congestion Control & Sliding Window", priority: "HIGH (Weak Area)", estMinutes: 75 },
+    { day: "Tomorrow (Morning)", subject: "CS8501 Theory of Computation", topic: "Pumping Lemma for Context Free Languages", priority: "MEDIUM", estMinutes: 60 },
+    { day: "Tomorrow (Evening)", subject: "CS8502 DBMS", topic: "B+ Tree Indexing & Transaction ACID Properties", priority: "HIGH", estMinutes: 90 },
   ];
 
+  // Modals
   const [showHallTicketModal, setShowHallTicketModal] = useState(false);
-
-  // ── 3. Self-Service Requests & Fees Data ──
-  const [leaveHistory, setLeaveHistory] = useState([
-    { id: "LV-101", type: "Medical Leave", dates: "Nov 15 - Nov 17", days: 3, reason: "Viral fever recovery", currentStep: 2, status: "HOD_REVIEW", steps: ["Mentor Approved", "Under HOD Review", "Admin Final Sign"] },
-    { id: "LV-092", type: "On-Duty (Hackathon)", dates: "Oct 12 - Oct 14", days: 3, reason: "Smart India Hackathon Zonal Round", currentStep: 3, status: "APPROVED", steps: ["Mentor Approved", "HOD Approved", "Admin Approved"] },
-  ]);
-
-  const [newLeaveForm, setNewLeaveForm] = useState({ type: "Medical Leave", fromDate: "", toDate: "", reason: "", attachment: null });
   const [showApplyLeaveModal, setShowApplyLeaveModal] = useState(false);
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [showSubmitAssignmentModal, setShowSubmitAssignmentModal] = useState(null);
 
-  const [feeDetails, setFeeDetails] = useState({
-    totalDemand: 85000,
-    paidAmount: 70000,
-    balance: 15000,
-    dueDate: "Dec 15, 2026",
-    categories: [
-      { name: "Tuition Fee (Sem 5)", amount: 55000, status: "PAID", receiptId: "REC-2026-901" },
-      { name: "College Bus Transport", amount: 15000, status: "PAID", receiptId: "REC-2026-902" },
-      { name: "End Semester Exam & Lab Fee", amount: 15000, status: "PENDING", receiptId: null },
-    ],
+  // Leave Form
+  const [leaveForm, setLeaveForm] = useState({
+    type: "Medical Leave",
+    dates: "Nov 20 - Nov 22 (2 Days)",
+    reason: "",
   });
 
-  const [showPayModal, setShowPayModal] = useState(false);
-
-  const handlePayFee = () => {
-    setFeeDetails(prev => ({
-      ...prev,
-      paidAmount: prev.totalDemand,
-      balance: 0,
-      categories: prev.categories.map(c => ({ ...c, status: "PAID", receiptId: "REC-2026-999" })),
-    }));
-    setShowPayModal(false);
+  const handleApplyLeaveSubmit = (e) => {
+    e.preventDefault();
+    if (!leaveForm.reason) return;
+    applyLeave({
+      student: studentProfile.name,
+      regNo: studentProfile.regNo,
+      dept: "CSE",
+      type: leaveForm.type,
+      dates: leaveForm.dates,
+      reason: leaveForm.reason,
+      proof: "uploaded_proof_doc.pdf",
+    });
+    setShowApplyLeaveModal(false);
+    setLeaveForm({ type: "Medical Leave", dates: "Nov 20 - Nov 22 (2 Days)", reason: "" });
   };
 
-  // ── 4. Placement & AI Study Planner Data ──
-  const [placementDrives, setPlacementDrives] = useState([
-    { id: "P1", company: "TCS Digital", role: "Systems Engineer Specialist", ctc: "7.5 LPA", minCgpa: 7.5, deadline: "Nov 25, 2026", applied: true, resumeStatus: "Shortlisted for Technical Round" },
-    { id: "P2", company: "Google Cloud", role: "Cloud Support Associate", ctc: "12.0 LPA", minCgpa: 8.0, deadline: "Nov 30, 2026", applied: false, resumeStatus: "Eligible to Apply" },
-    { id: "P3", company: "Zoho Corporation", role: "Software Developer", ctc: "8.4 LPA", minCgpa: 7.0, deadline: "Dec 05, 2026", applied: false, resumeStatus: "Eligible to Apply" },
-  ]);
-
-  const [aiStudyPlan] = useState([
-    { day: "Today (Evening)", subject: "CS8503 Computer Networks", topic: "TCP Congestion Control & Sliding Window", priority: "HIGH (Weak Area)", estMinutes: 75 },
-    { day: "Tomorrow (Morning)", subject: "CS8501 Theory of Computation", topic: "Pumping Lemma for CFLs", priority: "MEDIUM", estMinutes: 60 },
-    { day: "Tomorrow (Evening)", subject: "CS8502 DBMS", topic: "B+ Tree Indexing & Query Execution", priority: "HIGH", estMinutes: 90 },
-  ]);
+  const handleConfirmPay = () => {
+    payFees();
+    setShowPayModal(false);
+  };
 
   const attendanceRingData = {
     datasets: [{
@@ -140,10 +135,10 @@ export default function StudentDashboard() {
   };
 
   const gpaChartData = {
-    labels: semesterGpa.map(s => s.sem),
+    labels: semesterGpa.map((s) => s.sem),
     datasets: [{
       label: "GPA",
-      data: semesterGpa.map(s => s.gpa),
+      data: semesterGpa.map((s) => s.gpa),
       borderColor: "#6366f1",
       backgroundColor: isDark ? "rgba(99,102,241,0.18)" : "rgba(99,102,241,0.08)",
       fill: true,
@@ -153,7 +148,12 @@ export default function StudentDashboard() {
     }],
   };
 
-  const todayStr = new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "short", day: "numeric" });
+  const todayStr = new Date().toLocaleDateString("en-IN", {
+    weekday: "long",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 
   return (
     <div className="animate-fadeIn" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -176,11 +176,16 @@ export default function StudentDashboard() {
           <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
             <div
               style={{
-                width: 60, height: 60,
+                width: 60,
+                height: 60,
                 borderRadius: "18px",
                 background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#fff", fontSize: "24px", fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontSize: "24px",
+                fontWeight: 800,
                 boxShadow: "0 8px 24px rgba(99,102,241,0.4)",
               }}
             >
@@ -208,22 +213,22 @@ export default function StudentDashboard() {
             <button
               onClick={() => setShowHallTicketModal(true)}
               className="btn btn-primary btn-sm"
-              style={{ borderRadius: "12px", padding: "9px 16px", gap: 8, background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+              style={{ borderRadius: "10px", padding: "8px 16px", gap: 6, background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
             >
-              <Download size={16} /> Hall Ticket
+              <Download size={15} /> Hall Ticket
             </button>
             <button
               onClick={() => setShowApplyLeaveModal(true)}
               className="btn btn-secondary btn-sm"
-              style={{ borderRadius: "12px", padding: "9px 16px", gap: 8 }}
+              style={{ borderRadius: "10px", padding: "8px 16px", gap: 6 }}
             >
-              <FileText size={16} /> Apply Leave / OD
+              <FileText size={15} /> Apply Leave / OD
             </button>
           </div>
         </div>
       </motion.div>
 
-      {/* ── 4 STUDENT DOMAIN TABS ── */}
+      {/* ── 4 TABS ── */}
       <div
         style={{
           display: "flex",
@@ -236,11 +241,11 @@ export default function StudentDashboard() {
         }}
       >
         {[
-          { key: "overview", label: "Academic Overview", icon: GraduationCap },
-          { key: "academics", label: "Exams & Learning Hub", icon: BookOpen },
-          { key: "requests_fees", label: "Self-Service & Fees", icon: CreditCard },
-          { key: "placement_ai", label: "Placement & AI Study Planner", icon: Brain },
-        ].map(tab => (
+          { key: "overview", label: "Academic Profile & Cutoff Guard", icon: GraduationCap },
+          { key: "academics", label: `Exams & Courseware (${materials.length})`, icon: BookOpen },
+          { key: "requests_fees", label: `Self-Service & Fees (Due: ₹${feeRecord.balance.toLocaleString()})`, icon: CreditCard },
+          { key: "placement_ai", label: "Career & AI Revision Planner", icon: Brain },
+        ].map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
@@ -269,43 +274,45 @@ export default function StudentDashboard() {
         ))}
       </div>
 
-      {/* ── TAB 1: ACADEMIC OVERVIEW ── */}
+      {/* ── TAB 1: ACADEMIC PROFILE & ATTENDANCE GUARD ── */}
       {activeTab === "overview" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          {/* Quick Metrics */}
+          {/* Quick Stats Grid */}
           <div className="dashboard-grid">
             <div className="glass-card" style={{ padding: 20 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-tertiary)" }}>Cumulative CGPA</span>
-              <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#10b981", marginTop: 4 }}>
+              <div style={{ fontSize: "1.85rem", fontWeight: 800, color: "#10b981", marginTop: 4 }}>
                 {studentProfile.cgpa} <span style={{ fontSize: 13, color: "var(--text-tertiary)" }}>/ 10</span>
               </div>
-              <span style={{ fontSize: 11, color: "#10b981", fontWeight: 700 }}>Top 5% in CSE Department</span>
+              <span style={{ fontSize: 11.5, color: "#10b981", fontWeight: 700 }}>Top 5% in CSE Department</span>
             </div>
             <div className="glass-card" style={{ padding: 20 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-tertiary)" }}>Total Attendance</span>
-              <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#6366f1", marginTop: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-tertiary)" }}>Overall Attendance</span>
+              <div style={{ fontSize: "1.85rem", fontWeight: 800, color: "#6366f1", marginTop: 4 }}>
                 {attendanceStats.overall}%
               </div>
-              <span style={{ fontSize: 11, color: "#6366f1", fontWeight: 700 }}>Above 75% Regulatory Cutoff</span>
+              <span style={{ fontSize: 11.5, color: "#6366f1", fontWeight: 700 }}>Above 75% Regulatory Cutoff</span>
             </div>
             <div className="glass-card" style={{ padding: 20 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-tertiary)" }}>Outstanding Fees</span>
-              <div style={{ fontSize: "1.8rem", fontWeight: 800, color: feeDetails.balance > 0 ? "#ef4444" : "#10b981", marginTop: 4 }}>
-                ₹{feeDetails.balance.toLocaleString()}
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-tertiary)" }}>Fee Balance</span>
+              <div style={{ fontSize: "1.85rem", fontWeight: 800, color: feeRecord.balance > 0 ? "#ef4444" : "#10b981", marginTop: 4 }}>
+                ₹{feeRecord.balance.toLocaleString()}
               </div>
-              <span style={{ fontSize: 11, color: feeDetails.balance > 0 ? "#ef4444" : "#10b981", fontWeight: 700 }}>
-                {feeDetails.balance > 0 ? "Due Dec 15" : "All Fees Cleared"}
+              <span style={{ fontSize: 11.5, color: feeRecord.balance > 0 ? "#ef4444" : "#10b981", fontWeight: 700 }}>
+                {feeRecord.balance > 0 ? `Due by ${feeRecord.dueDate}` : "All Dues Cleared"}
               </span>
             </div>
             <div className="glass-card" style={{ padding: 20 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-tertiary)" }}>Eligible Placement Drives</span>
-              <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#0ea5e9", marginTop: 4 }}>3 Companies</div>
-              <span style={{ fontSize: 11, color: "#0ea5e9", fontWeight: 700 }}>TCS Digital Applied</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-tertiary)" }}>Active Leave / OD</span>
+              <div style={{ fontSize: "1.85rem", fontWeight: 800, color: "#0ea5e9", marginTop: 4 }}>
+                {leaves.length} Requests
+              </div>
+              <span style={{ fontSize: 11.5, color: "#0ea5e9", fontWeight: 700 }}>Track Live Status</span>
             </div>
           </div>
 
-          {/* Cutoff Alert Banner (If Any Subject < 75%) */}
-          {attendanceStats.subjects.some(s => s.pct < 75) && (
+          {/* Dynamic 75% Cutoff Alert Banner */}
+          {attendanceStats.subjects.some((s) => s.pct < 75) && (
             <div
               style={{
                 padding: "14px 18px",
@@ -319,21 +326,21 @@ export default function StudentDashboard() {
             >
               <AlertTriangle size={20} style={{ color: "#f59e0b", flexShrink: 0 }} />
               <div style={{ fontSize: 12.5, color: "var(--text-primary)" }}>
-                <strong>Attendance Warning:</strong> Your attendance in <strong>CS8503 Computer Networks (73.7%)</strong> is currently below the mandatory 75% university eligibility requirement. You must attend the next <strong>3 consecutive lectures</strong> without absence to restore eligibility.
+                <strong>University Attendance Warning:</strong> Your attendance in <strong>CS8503 Computer Networks (73.7%)</strong> is currently below the mandatory 75% university eligibility requirement. You must attend the next <strong>3 consecutive lectures</strong> without absence to restore examination clearance.
               </div>
             </div>
           )}
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 24 }}>
-            {/* Circular Attendance Meter & Subject Breakdown */}
-            <div className="glass-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 18 }}>
+            {/* Attendance Meter & Breakdown */}
+            <div className="glass-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
-                    Course-Wise Attendance Breakdown
+                    Course Attendance Breakdown
                   </h3>
                   <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "4px 0 0" }}>
-                    Minimum 75% required for Anna University Exam Hall Ticket eligibility
+                    Minimum 75% required for Anna University Hall Ticket clearance
                   </p>
                 </div>
                 <div style={{ width: 68, height: 68, position: "relative" }}>
@@ -344,8 +351,8 @@ export default function StudentDashboard() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {attendanceStats.subjects.map(sub => (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {attendanceStats.subjects.map((sub) => (
                   <div key={sub.code} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5 }}>
                       <div>
@@ -364,7 +371,7 @@ export default function StudentDashboard() {
               </div>
             </div>
 
-            {/* Today's Class Schedule */}
+            {/* Today's Classroom Wayfinder */}
             <div className="glass-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
                 <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
@@ -376,7 +383,7 @@ export default function StudentDashboard() {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {todaySchedule.map(slot => (
+                {todaySchedule.map((slot) => (
                   <div
                     key={slot.period}
                     style={{
@@ -390,16 +397,7 @@ export default function StudentDashboard() {
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div
-                        style={{
-                          width: 36, height: 36,
-                          borderRadius: 8,
-                          background: slot.status === "IN_PROGRESS" ? "#6366f1" : "rgba(99,102,241,0.1)",
-                          color: slot.status === "IN_PROGRESS" ? "#fff" : "#6366f1",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontWeight: 800, fontSize: 12,
-                        }}
-                      >
+                      <div style={{ width: 36, height: 36, borderRadius: 8, background: slot.status === "IN_PROGRESS" ? "#6366f1" : "rgba(99,102,241,0.1)", color: slot.status === "IN_PROGRESS" ? "#fff" : "#6366f1", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12 }}>
                         P{slot.period}
                       </div>
                       <div>
@@ -409,15 +407,7 @@ export default function StudentDashboard() {
                         </div>
                       </div>
                     </div>
-                    <span
-                      className="badge"
-                      style={{
-                        background: isDark ? "#1e293b" : "#e0e7ff",
-                        color: "#6366f1",
-                        fontWeight: 700,
-                        fontSize: 11,
-                      }}
-                    >
+                    <span className="badge" style={{ background: isDark ? "#1e293b" : "#e0e7ff", color: "#6366f1", fontWeight: 700, fontSize: 11 }}>
                       <MapPin size={11} style={{ marginRight: 2 }} /> {slot.room}
                     </span>
                   </div>
@@ -428,115 +418,94 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {/* ── TAB 2: EXAMS & LEARNING HUB ── */}
+      {/* ── TAB 2: EXAMS & COURSEWARE ── */}
       {activeTab === "academics" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          {/* GPA Progress & Grade Sheet */}
+          {/* GPA & Exam Schedule */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
             <div className="glass-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
                 <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
-                  Semester-Wise GPA & CGPA Trajectory
+                  Semester-Wise GPA Progress
                 </h3>
                 <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "4px 0 0" }}>
                   Current CGPA: <strong style={{ color: "#10b981" }}>8.72</strong> (First Class with Distinction)
                 </p>
               </div>
-              <div style={{ height: 200 }}>
+              <div style={{ height: 190 }}>
                 <Line data={gpaChartData} options={{ maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 7.0, max: 10.0 } } }} />
               </div>
             </div>
 
-            {/* University Exam Schedule */}
             <div className="glass-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
-                    Nov/Dec 2026 End Semester Exam Schedule
+                    End-Semester University Schedule
                   </h3>
                   <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "4px 0 0" }}>
                     Anna University Affiliated Examinations
                   </p>
                 </div>
-                <button
-                  onClick={() => setShowHallTicketModal(true)}
-                  className="btn btn-primary btn-sm"
-                  style={{ gap: 6, borderRadius: 8, fontSize: 11.5 }}
-                >
+                <button onClick={() => setShowHallTicketModal(true)} className="btn btn-primary btn-sm" style={{ gap: 6, borderRadius: 8, fontSize: 11.5 }}>
                   <Download size={13} /> Hall Ticket
                 </button>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {examSchedule.map(ex => (
-                  <div
-                    key={ex.code}
-                    style={{
-                      padding: "12px 14px",
-                      borderRadius: 10,
-                      background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc",
-                      border: "1px solid var(--border-color)",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
+                {examSchedule.map((ex) => (
+                  <div key={ex.code} style={{ padding: "12px 14px", borderRadius: 10, background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc", border: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
                       <strong style={{ fontSize: 13, color: "var(--text-primary)" }}>{ex.code}: {ex.subject}</strong>
-                      <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>
-                        {ex.date} • {ex.session}
-                      </div>
+                      <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>{ex.date} • {ex.session}</div>
                     </div>
-                    <span className="badge" style={{ background: "rgba(99,102,241,0.1)", color: "#6366f1" }}>
-                      {ex.venue}
-                    </span>
+                    <span className="badge" style={{ background: "rgba(99,102,241,0.1)", color: "#6366f1" }}>{ex.venue}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Digital Learning Hub (Materials & Notes) */}
-          <div className="glass-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
-            <div>
+          {/* Courseware Download & Assignments */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
+            {/* Learning Materials */}
+            <div className="glass-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
               <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
-                Digital Learning Hub — Lecture Notes & Lab Manuals
+                Verified Lecture Notes & Lab Manuals
               </h3>
-              <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "4px 0 0" }}>
-                Verified academic resources uploaded by your department faculty
-              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {materials.map((mat) => (
+                  <div key={mat.id} style={{ padding: 12, borderRadius: 10, background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc", border: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <strong style={{ fontSize: 13, color: "var(--text-primary)" }}>{mat.title}</strong>
+                      <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>{mat.subject} • {mat.size}</div>
+                    </div>
+                    <button onClick={() => alert(`Downloading ${mat.title}...`)} className="btn btn-ghost btn-sm" style={{ gap: 4, color: "#6366f1", fontSize: 11 }}>
+                      <Download size={13} /> PDF
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14 }}>
-              {learningMaterials.map(mat => (
-                <div
-                  key={mat.id}
-                  style={{
-                    padding: 16,
-                    borderRadius: 12,
-                    background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc",
-                    border: "1px solid var(--border-color)",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 10,
-                  }}
-                >
-                  <div>
-                    <span className="badge" style={{ background: "rgba(99,102,241,0.1)", color: "#6366f1", fontSize: 10 }}>
-                      {mat.subject}
-                    </span>
-                    <strong style={{ display: "block", fontSize: 13, color: "var(--text-primary)", marginTop: 6 }}>
-                      {mat.title}
-                    </strong>
-                    <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>
-                      By {mat.by} • {mat.size} • Uploaded {mat.date}
+            {/* Assignments Submission Desk */}
+            <div className="glass-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
+                Active Assignments & Submission Desk
+              </h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {assignments.map((ass) => (
+                  <div key={ass.id} style={{ padding: 12, borderRadius: 10, background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc", border: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <strong style={{ fontSize: 13, color: "var(--text-primary)" }}>{ass.title}</strong>
+                      <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>{ass.subject} • Due: <strong style={{ color: "#ef4444" }}>{ass.deadline}</strong></div>
                     </div>
+                    <button onClick={() => setShowSubmitAssignmentModal(ass)} className="btn btn-primary btn-sm" style={{ borderRadius: 8, fontSize: 11 }}>
+                      Submit File
+                    </button>
                   </div>
-                  <button className="btn btn-ghost btn-sm" style={{ alignSelf: "flex-start", gap: 6, fontSize: 11.5, color: "#6366f1" }}>
-                    <Download size={13} /> Download PDF
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -545,67 +514,40 @@ export default function StudentDashboard() {
       {/* ── TAB 3: SELF-SERVICE & FEES ── */}
       {activeTab === "requests_fees" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 24 }}>
-          {/* Online Leave & OD Applications */}
+          {/* Leave / OD Multi-Tier Tracker */}
           <div className="glass-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
-                  Online Leave & On-Duty (OD) Tracker
+                  Online Leave / OD Status Tracker
                 </h3>
                 <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "4px 0 0" }}>
-                  Multi-tier approval workflow (Mentor &rarr; HOD &rarr; Admin)
+                  Mentor &rarr; HOD &rarr; Admin 3-tier approval progress
                 </p>
               </div>
-              <button
-                onClick={() => setShowApplyLeaveModal(true)}
-                className="btn btn-primary btn-sm"
-                style={{ gap: 6, borderRadius: 8 }}
-              >
-                <Upload size={14} /> New Request
+              <button onClick={() => setShowApplyLeaveModal(true)} className="btn btn-primary btn-sm" style={{ gap: 4, borderRadius: 8 }}>
+                <Upload size={13} /> Apply
               </button>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {leaveHistory.map(l => (
-                <div
-                  key={l.id}
-                  style={{
-                    padding: 16,
-                    borderRadius: 12,
-                    background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc",
-                    border: "1px solid var(--border-color)",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 10,
-                  }}
-                >
+              {leaves.map((l) => (
+                <div key={l.id} style={{ padding: 14, borderRadius: 12, background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc", border: "1px solid var(--border-color)", display: "flex", flexDirection: "column", gap: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>
                       <strong style={{ fontSize: 13.5, color: "var(--text-primary)" }}>{l.type}</strong>
-                      <div style={{ fontSize: 11.5, color: "var(--text-tertiary)", marginTop: 2 }}>
-                        {l.dates} ({l.days} Days) • {l.reason}
-                      </div>
+                      <div style={{ fontSize: 11.5, color: "var(--text-tertiary)", marginTop: 2 }}>{l.dates} • {l.reason}</div>
                     </div>
-                    <span
-                      className="badge"
-                      style={{
-                        background: l.status === "APPROVED" ? "rgba(16,185,129,0.15)" : "rgba(245,158,11,0.15)",
-                        color: l.status === "APPROVED" ? "#10b981" : "#f59e0b",
-                        fontWeight: 700,
-                      }}
-                    >
+                    <span className="badge" style={{ background: l.status === "APPROVED" ? "rgba(16,185,129,0.15)" : "rgba(245,158,11,0.15)", color: l.status === "APPROVED" ? "#10b981" : "#f59e0b", fontWeight: 700 }}>
                       {l.status}
                     </span>
                   </div>
 
-                  {/* 3-Step Visual Progress Bar */}
-                  <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-                    {l.steps.map((st, i) => (
-                      <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-                        <div style={{ height: 4, borderRadius: 2, background: i < l.currentStep ? "#10b981" : isDark ? "rgba(255,255,255,0.1)" : "#e2e8f0" }} />
-                        <span style={{ fontSize: 9.5, color: i < l.currentStep ? "#10b981" : "var(--text-tertiary)", fontWeight: 600 }}>
-                          {st}
-                        </span>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {(l.steps || ["Mentor Endorsement", "HOD Approval", "Admin Final Sign"]).map((st, i) => (
+                      <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", gap: 3 }}>
+                        <div style={{ height: 4, borderRadius: 2, background: l.status === "APPROVED" || i === 0 ? "#10b981" : isDark ? "rgba(255,255,255,0.1)" : "#e2e8f0" }} />
+                        <span style={{ fontSize: 9.5, color: l.status === "APPROVED" || i === 0 ? "#10b981" : "var(--text-tertiary)", fontWeight: 600 }}>{st}</span>
                       </div>
                     ))}
                   </div>
@@ -614,173 +556,124 @@ export default function StudentDashboard() {
             </div>
           </div>
 
-          {/* Fees Breakdown & Instant Payment */}
+          {/* Fee Account & Instant Receipts */}
           <div className="glass-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
-                  Institutional Fee Account & Receipts
+                  Institutional Fee Account
                 </h3>
                 <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "4px 0 0" }}>
-                  Official semester payment reconciliation & instant PDF download
+                  Semester 5 tuition, lab, and transport fee reconciliation
                 </p>
               </div>
-              {feeDetails.balance > 0 && (
-                <button
-                  onClick={() => setShowPayModal(true)}
-                  className="btn btn-primary btn-sm"
-                  style={{ gap: 6, borderRadius: 8, background: "#10b981" }}
-                >
-                  <CreditCard size={14} /> Pay ₹{feeDetails.balance.toLocaleString()}
+              {feeRecord.balance > 0 && (
+                <button onClick={() => setShowPayModal(true)} className="btn btn-primary btn-sm" style={{ gap: 6, borderRadius: 8, background: "#10b981" }}>
+                  <CreditCard size={14} /> Pay ₹{feeRecord.balance.toLocaleString()}
                 </button>
               )}
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {feeDetails.categories.map((c, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc",
-                    border: "1px solid var(--border-color)",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <div>
-                    <strong style={{ fontSize: 13, color: "var(--text-primary)" }}>{c.name}</strong>
-                    <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>
-                      ₹{c.amount.toLocaleString()} • {c.status === "PAID" ? `Receipt: ${c.receiptId}` : `Due: ${feeDetails.dueDate}`}
-                    </div>
-                  </div>
-                  {c.status === "PAID" ? (
-                    <button
-                      onClick={() => alert(`Downloading PDF Receipt ${c.receiptId}...`)}
-                      className="btn btn-ghost btn-sm"
-                      style={{ gap: 4, fontSize: 11, color: "#10b981" }}
-                    >
-                      <Download size={12} /> Receipt
-                    </button>
-                  ) : (
-                    <span className="badge badge-danger" style={{ fontSize: 10 }}>Due</span>
-                  )}
+              <div style={{ padding: 14, borderRadius: 10, background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc", border: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <strong style={{ fontSize: 13, color: "var(--text-primary)" }}>Total Semester Demand</strong>
+                  <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>Tuition, Bus, and Examination Fees</div>
                 </div>
-              ))}
+                <strong style={{ fontSize: 14, color: "var(--text-primary)" }}>₹{feeRecord.totalFee.toLocaleString()}</strong>
+              </div>
+
+              <div style={{ padding: 14, borderRadius: 10, background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc", border: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <strong style={{ fontSize: 13, color: "var(--text-primary)" }}>Total Paid to Date</strong>
+                  <div style={{ fontSize: 11, color: "#10b981", marginTop: 2 }}>Payment Verified via Razorpay UPI</div>
+                </div>
+                <strong style={{ fontSize: 14, color: "#10b981" }}>₹{feeRecord.paid.toLocaleString()}</strong>
+              </div>
+
+              <div style={{ padding: 14, borderRadius: 10, background: feeRecord.balance > 0 ? "rgba(239,68,68,0.06)" : "rgba(16,185,129,0.06)", border: `1px solid ${feeRecord.balance > 0 ? "rgba(239,68,68,0.2)" : "rgba(16,185,129,0.2)"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <strong style={{ fontSize: 13, color: feeRecord.balance > 0 ? "#ef4444" : "#10b981" }}>
+                    {feeRecord.balance > 0 ? "Outstanding Dues" : "Zero Balance Cleared"}
+                  </strong>
+                  <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>
+                    {feeRecord.balance > 0 ? `Must be cleared before ${feeRecord.dueDate}` : "All University fees settled"}
+                  </div>
+                </div>
+                {feeRecord.balance === 0 ? (
+                  <button onClick={() => alert("Downloading Official Payment Receipt PDF...")} className="btn btn-ghost btn-sm" style={{ gap: 4, color: "#10b981", fontSize: 11.5 }}>
+                    <Download size={13} /> Receipt PDF
+                  </button>
+                ) : (
+                  <strong style={{ fontSize: 15, color: "#ef4444" }}>₹{feeRecord.balance.toLocaleString()}</strong>
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── TAB 4: PLACEMENT & AI STUDY PLANNER ── */}
+      {/* ── TAB 4: CAREER & AI REVISION PLANNER ── */}
       {activeTab === "placement_ai" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 24 }}>
-          {/* Placement Portal */}
+          {/* Placement Drives */}
           <div className="glass-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
               <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
                 SSEC Placement & Internship Portal
               </h3>
               <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "4px 0 0" }}>
-                Campus recruitment drives matching your CGPA ({studentProfile.cgpa})
+                Drives matching your 8.72 CGPA qualification
               </p>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {placementDrives.map(drive => (
-                <div
-                  key={drive.id}
-                  style={{
-                    padding: 16,
-                    borderRadius: 12,
-                    background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc",
-                    border: "1px solid var(--border-color)",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 10,
-                  }}
-                >
+              {drives.map((d) => (
+                <div key={d.id} style={{ padding: 14, borderRadius: 10, background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc", border: "1px solid var(--border-color)", display: "flex", flexDirection: "column", gap: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>
-                      <strong style={{ fontSize: 14, color: "var(--text-primary)" }}>{drive.company}</strong>
-                      <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
-                        {drive.role} • Package: <strong style={{ color: "#10b981" }}>{drive.ctc}</strong>
-                      </div>
-                      <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>
-                        Apply by: {drive.deadline} • Min CGPA: {drive.minCgpa}
-                      </div>
+                      <strong style={{ fontSize: 14, color: "var(--text-primary)" }}>{d.company}</strong>
+                      <div style={{ fontSize: 11.5, color: "var(--text-secondary)", marginTop: 2 }}>{d.role} • Package: <strong style={{ color: "#10b981" }}>{d.ctc}</strong></div>
                     </div>
-                    {drive.applied ? (
+                    {d.applied ? (
                       <span className="badge badge-success">Applied</span>
                     ) : (
-                      <button
-                        onClick={() => {
-                          setPlacementDrives(prev => prev.map(d => d.id === drive.id ? { ...d, applied: true, resumeStatus: "Application Submitted" } : d));
-                        }}
-                        className="btn btn-primary btn-sm"
-                        style={{ borderRadius: 8, fontSize: 11.5 }}
-                      >
+                      <button onClick={() => applyToDrive(d.id)} className="btn btn-primary btn-sm" style={{ borderRadius: 6, fontSize: 11 }}>
                         1-Click Apply
                       </button>
                     )}
                   </div>
-                  <div style={{ fontSize: 11, color: "#6366f1", fontWeight: 600 }}>
-                    Status: {drive.resumeStatus}
-                  </div>
+                  <div style={{ fontSize: 11, color: "#6366f1", fontWeight: 600 }}>Status: {d.resumeStatus}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* AI Study Planner */}
+          {/* AI Revision Planner */}
           <div className="glass-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
-                  <Brain size={18} style={{ color: "#6366f1" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Brain size={18} style={{ color: "#6366f1" }} />
+                <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
                   AI Smart Revision Planner
                 </h3>
-                <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "4px 0 0" }}>
-                  Dynamic study schedule adjusted for upcoming exams & weak topics
-                </p>
               </div>
-              <button onClick={() => navigate("/study-planner")} className="btn btn-ghost btn-sm" style={{ color: "#6366f1", fontSize: 11.5 }}>
-                Full Planner →
+              <button onClick={() => navigate("/study-planner")} className="btn btn-ghost btn-sm" style={{ color: "#6366f1", fontSize: 11 }}>
+                Open Full AI Hub →
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {aiStudyPlan.map((plan, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: 14,
-                    borderRadius: 12,
-                    background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc",
-                    border: "1px solid var(--border-color)",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
+                <div key={i} style={{ padding: 12, borderRadius: 10, background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc", border: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <span style={{ fontSize: 10, fontWeight: 700, color: "#6366f1" }}>{plan.day}</span>
-                    <strong style={{ display: "block", fontSize: 13, color: "var(--text-primary)", marginTop: 2 }}>
-                      {plan.subject}
-                    </strong>
-                    <div style={{ fontSize: 11.5, color: "var(--text-secondary)", marginTop: 2 }}>
-                      {plan.topic}
-                    </div>
+                    <strong style={{ display: "block", fontSize: 13, color: "var(--text-primary)", marginTop: 2 }}>{plan.subject}</strong>
+                    <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>{plan.topic}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <span className="badge" style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444", fontSize: 10 }}>
-                      {plan.priority}
-                    </span>
-                    <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 4 }}>
-                      {plan.estMinutes} mins
-                    </div>
+                    <span className="badge" style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444", fontSize: 10 }}>{plan.priority}</span>
+                    <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 3 }}>{plan.estMinutes} mins</div>
                   </div>
                 </div>
               ))}
@@ -789,15 +682,13 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {/* ── MODAL: HALL TICKET PREVIEW ── */}
+      {/* ── MODAL: HALL TICKET ── */}
       {showHallTicketModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: 20 }}>
-          <div className="glass-card" style={{ width: "100%", maxWidth: 520, padding: 28, borderRadius: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-color)", paddingBottom: 12 }}>
+          <div className="glass-card" style={{ width: "100%", maxWidth: 500, padding: 26, borderRadius: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-color)", paddingBottom: 10 }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: "var(--text-primary)" }}>
-                  Anna University Examination Hall Ticket
-                </h3>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: "var(--text-primary)" }}>Anna University Examination Hall Ticket</h3>
                 <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>Nov/Dec 2026 Examination Session</span>
               </div>
               <button onClick={() => setShowHallTicketModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)" }}>
@@ -809,26 +700,19 @@ export default function StudentDashboard() {
               <div style={{ fontSize: 12, display: "flex", flexDirection: "column", gap: 4, color: "var(--text-secondary)" }}>
                 <div>Student Name: <strong>{studentProfile.name}</strong></div>
                 <div>Register Number: <strong>{studentProfile.regNo}</strong></div>
-                <div>Degree & Branch: <strong>B.E. Computer Science & Engg</strong></div>
+                <div>Degree & Branch: <strong>B.E. Computer Science & Engineering</strong></div>
                 <div>Center: <strong>Sri Shanmugha College of Engineering (7304)</strong></div>
                 <div style={{ color: "#10b981", fontWeight: 700, marginTop: 4 }}>✓ Verified: Attendance &gt; 75% • Fee Dues Cleared</div>
               </div>
-              <div style={{ width: 80, height: 80, border: "2px solid var(--border-color)", borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#fff", color: "#000" }}>
-                <QrCode size={56} />
-                <span style={{ fontSize: 8, fontWeight: 700 }}>VERIFIED</span>
+              <div style={{ width: 75, height: 75, border: "2px solid var(--border-color)", borderRadius: 8, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#fff", color: "#000" }}>
+                <QrCode size={52} />
+                <span style={{ fontSize: 7, fontWeight: 800 }}>VERIFIED</span>
               </div>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 6 }}>
               <button onClick={() => setShowHallTicketModal(false)} className="btn btn-secondary btn-sm" style={{ borderRadius: 8 }}>Close</button>
-              <button
-                onClick={() => {
-                  alert("Hall Ticket PDF generated and downloaded to device!");
-                  setShowHallTicketModal(false);
-                }}
-                className="btn btn-primary btn-sm"
-                style={{ borderRadius: 8, gap: 6 }}
-              >
+              <button onClick={() => { alert("Hall ticket downloaded as official PDF!"); setShowHallTicketModal(false); }} className="btn btn-primary btn-sm" style={{ borderRadius: 8, gap: 6 }}>
                 <Printer size={14} /> Print / Save PDF
               </button>
             </div>
@@ -839,107 +723,64 @@ export default function StudentDashboard() {
       {/* ── MODAL: APPLY LEAVE / OD ── */}
       {showApplyLeaveModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: 20 }}>
-          <div className="glass-card" style={{ width: "100%", maxWidth: 460, padding: 24, borderRadius: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "var(--text-primary)" }}>
-              Submit Online Leave / On-Duty Request
-            </h3>
-
+          <form onSubmit={handleApplyLeaveSubmit} className="glass-card" style={{ width: "100%", maxWidth: 460, padding: 24, borderRadius: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "var(--text-primary)" }}>Submit Leave / OD Request</h3>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)" }}>Leave Category</label>
-              <select
-                value={newLeaveForm.type}
-                onChange={e => setNewLeaveForm({ ...newLeaveForm, type: e.target.value })}
-                style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--border-color)", background: isDark ? "#1e293b" : "#fff", color: "var(--text-primary)", marginTop: 4 }}
-              >
+              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)" }}>Category</label>
+              <select value={leaveForm.type} onChange={(e) => setLeaveForm({ ...leaveForm, type: e.target.value })} style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--border-color)", background: isDark ? "#1e293b" : "#fff", color: "var(--text-primary)", marginTop: 4 }}>
                 <option value="Medical Leave">Medical Leave (Doctor Slip Required)</option>
-                <option value="On-Duty (Symposium/Conference)">On-Duty (Paper / Symposium)</option>
+                <option value="On-Duty (Symposium/Conference)">On-Duty (Paper / Symposium Presentation)</option>
                 <option value="On-Duty (Sports/NSS)">On-Duty (Sports / NSS Activity)</option>
                 <option value="Personal Leave">Personal Leave</option>
               </select>
             </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)" }}>From Date</label>
-                <input
-                  type="date"
-                  onChange={e => setNewLeaveForm({ ...newLeaveForm, fromDate: e.target.value })}
-                  style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--border-color)", background: isDark ? "#1e293b" : "#fff", color: "var(--text-primary)", marginTop: 4 }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)" }}>To Date</label>
-                <input
-                  type="date"
-                  onChange={e => setNewLeaveForm({ ...newLeaveForm, toDate: e.target.value })}
-                  style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--border-color)", background: isDark ? "#1e293b" : "#fff", color: "var(--text-primary)", marginTop: 4 }}
-                />
-              </div>
-            </div>
-
             <div>
-              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)" }}>Detailed Justification</label>
-              <textarea
-                rows={3}
-                placeholder="State your reason clearly for Faculty Mentor & HOD review..."
-                onChange={e => setNewLeaveForm({ ...newLeaveForm, reason: e.target.value })}
-                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid var(--border-color)", background: isDark ? "#1e293b" : "#fff", color: "var(--text-primary)", marginTop: 4 }}
-              />
+              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)" }}>Date Range</label>
+              <input type="text" value={leaveForm.dates} onChange={(e) => setLeaveForm({ ...leaveForm, dates: e.target.value })} style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--border-color)", background: isDark ? "#1e293b" : "#fff", color: "var(--text-primary)", marginTop: 4 }} />
             </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)" }}>Reason / Justification</label>
+              <textarea required rows={3} placeholder="State reason clearly for Faculty Mentor review..." value={leaveForm.reason} onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })} style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--border-color)", background: isDark ? "#1e293b" : "#fff", color: "var(--text-primary)", marginTop: 4 }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 4 }}>
+              <button type="button" onClick={() => setShowApplyLeaveModal(false)} className="btn btn-secondary btn-sm" style={{ borderRadius: 8 }}>Cancel</button>
+              <button type="submit" className="btn btn-primary btn-sm" style={{ borderRadius: 8 }}>Submit Request</button>
+            </div>
+          </form>
+        </div>
+      )}
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 6 }}>
-              <button onClick={() => setShowApplyLeaveModal(false)} className="btn btn-secondary btn-sm" style={{ borderRadius: 8 }}>Cancel</button>
-              <button
-                onClick={() => {
-                  setLeaveHistory(prev => [
-                    {
-                      id: `LV-${Date.now().toString().slice(-3)}`,
-                      type: newLeaveForm.type,
-                      dates: "Nov 20 - Nov 21",
-                      days: 2,
-                      reason: newLeaveForm.reason || "Submitted online request",
-                      currentStep: 1,
-                      status: "MENTOR_REVIEW",
-                      steps: ["Under Mentor Review", "HOD Approval", "Admin Final Sign"],
-                    },
-                    ...prev,
-                  ]);
-                  setShowApplyLeaveModal(false);
-                }}
-                className="btn btn-primary btn-sm"
-                style={{ borderRadius: 8 }}
-              >
-                Submit Application
-              </button>
+      {/* ── MODAL: PAY FEES ── */}
+      {showPayModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: 20 }}>
+          <div className="glass-card" style={{ width: "100%", maxWidth: 420, padding: 24, borderRadius: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "var(--text-primary)" }}>Instant University Fee Payment</h3>
+            <div style={{ padding: 14, borderRadius: 10, background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)" }}>
+              <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>Payable Semester Dues</div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: "#10b981", marginTop: 2 }}>₹{feeRecord.balance.toLocaleString()}</div>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>• Official receipt generated instantly and synced with Admin accounting.</div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button onClick={() => setShowPayModal(false)} className="btn btn-secondary btn-sm" style={{ borderRadius: 8 }}>Cancel</button>
+              <button onClick={handleConfirmPay} className="btn btn-primary btn-sm" style={{ borderRadius: 8, background: "#10b981" }}>Confirm & Pay Now</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── MODAL: ONLINE FEE PAYMENT ── */}
-      {showPayModal && (
+      {/* ── MODAL: SUBMIT ASSIGNMENT ── */}
+      {showSubmitAssignmentModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: 20 }}>
           <div className="glass-card" style={{ width: "100%", maxWidth: 440, padding: 24, borderRadius: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "var(--text-primary)" }}>
-              SSEC Instant Fee Payment Gateway
-            </h3>
-            <div style={{ padding: 14, borderRadius: 10, background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)" }}>
-              <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>Payable Exam & Lab Fee</div>
-              <div style={{ fontSize: 24, fontWeight: 900, color: "#10b981", marginTop: 2 }}>
-                ₹{feeDetails.balance.toLocaleString()}
-              </div>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "var(--text-primary)" }}>Upload Assignment Solution</h3>
+            <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)" }}>{showSubmitAssignmentModal.title} ({showSubmitAssignmentModal.subject})</p>
+            <div style={{ border: "2px dashed var(--border-strong)", borderRadius: 12, padding: "24px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textAlign: "center" }}>
+              <Upload size={28} style={{ color: "#6366f1" }} />
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>Drag & drop your PDF or Source Code archive</div>
             </div>
-
-            <div style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", flexDirection: "column", gap: 6 }}>
-              <div>• Instant University Receipt generation</div>
-              <div>• 100% Secure SSL encrypted gateway (UPI / Cards / Net Banking)</div>
-            </div>
-
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-              <button onClick={() => setShowPayModal(false)} className="btn btn-secondary btn-sm" style={{ borderRadius: 8 }}>Cancel</button>
-              <button onClick={handlePayFee} className="btn btn-primary btn-sm" style={{ borderRadius: 8, background: "#10b981" }}>
-                Confirm & Pay Now
-              </button>
+              <button onClick={() => setShowSubmitAssignmentModal(null)} className="btn btn-secondary btn-sm" style={{ borderRadius: 8 }}>Cancel</button>
+              <button onClick={() => { alert("Assignment solution submitted to faculty successfully!"); setShowSubmitAssignmentModal(null); }} className="btn btn-primary btn-sm" style={{ borderRadius: 8 }}>Submit Solution</button>
             </div>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ChatbotProvider } from './context/ChatbotContext';
 import { TenantProvider } from './context/TenantContext';
+import { CampusDataProvider } from './context/CampusDataContext';
 
 // Layout & Global Components
 import Layout from './components/layout/Layout';
@@ -80,38 +81,40 @@ export default function App() {
       <TenantProvider>
         <ThemeProvider>
           <AuthProvider>
-            <ChatbotProvider>
-              <Routes>
-                {/* Public Auth Route */}
-                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            <CampusDataProvider>
+              <ChatbotProvider>
+                <Routes>
+                  {/* Public Auth Route */}
+                  <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
 
-                {/* Core Dashboards */}
-                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  {/* Core Dashboards */}
+                  <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
 
-                {/* ERP Core Modules */}
-                <Route path="/students"      element={<ProtectedRoute><StudentManagement /></ProtectedRoute>} />
-                <Route path="/faculty"       element={<ProtectedRoute><FacultyManagement /></ProtectedRoute>} />
-                <Route path="/departments"   element={<ProtectedRoute><DepartmentManagement /></ProtectedRoute>} />
-                <Route path="/attendance"    element={<ProtectedRoute><AttendanceManagement /></ProtectedRoute>} />
-                <Route path="/timetable"     element={<ProtectedRoute><TimetableManagement /></ProtectedRoute>} />
-                <Route path="/exams"         element={<ProtectedRoute><ExaminationResults /></ProtectedRoute>} />
-                <Route path="/fees"          element={<ProtectedRoute><FeesPayment /></ProtectedRoute>} />
-                <Route path="/leave"         element={<ProtectedRoute><LeaveODManagement /></ProtectedRoute>} />
-                <Route path="/placement"     element={<ProtectedRoute><PlacementPortal /></ProtectedRoute>} />
-                <Route path="/events"        element={<ProtectedRoute><EventsClubs /></ProtectedRoute>} />
-                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                <Route path="/reports"       element={<ProtectedRoute><ReportsAnalytics /></ProtectedRoute>} />
-                <Route path="/settings"      element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                  {/* ERP Core Modules */}
+                  <Route path="/students"      element={<ProtectedRoute><StudentManagement /></ProtectedRoute>} />
+                  <Route path="/faculty"       element={<ProtectedRoute><FacultyManagement /></ProtectedRoute>} />
+                  <Route path="/departments"   element={<ProtectedRoute><DepartmentManagement /></ProtectedRoute>} />
+                  <Route path="/attendance"    element={<ProtectedRoute><AttendanceManagement /></ProtectedRoute>} />
+                  <Route path="/timetable"     element={<ProtectedRoute><TimetableManagement /></ProtectedRoute>} />
+                  <Route path="/exams"         element={<ProtectedRoute><ExaminationResults /></ProtectedRoute>} />
+                  <Route path="/fees"          element={<ProtectedRoute><FeesPayment /></ProtectedRoute>} />
+                  <Route path="/leave"         element={<ProtectedRoute><LeaveODManagement /></ProtectedRoute>} />
+                  <Route path="/placement"     element={<ProtectedRoute><PlacementPortal /></ProtectedRoute>} />
+                  <Route path="/events"        element={<ProtectedRoute><EventsClubs /></ProtectedRoute>} />
+                  <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                  <Route path="/reports"       element={<ProtectedRoute><ReportsAnalytics /></ProtectedRoute>} />
+                  <Route path="/settings"      element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
-                {/* AI Intelligence Lab */}
-                <Route path="/study-planner" element={<ProtectedRoute><AiStudyPlanner /></ProtectedRoute>} />
+                  {/* AI Intelligence Lab */}
+                  <Route path="/study-planner" element={<ProtectedRoute><AiStudyPlanner /></ProtectedRoute>} />
 
-                {/* Landing Page as primary root */}
-                <Route path="/"        element={<LandingPage />} />
-                <Route path="/landing" element={<LandingPage />} />
-                <Route path="*"        element={<Navigate to="/" replace />} />
-              </Routes>
-            </ChatbotProvider>
+                  {/* Landing Page as primary root */}
+                  <Route path="/"        element={<LandingPage />} />
+                  <Route path="/landing" element={<LandingPage />} />
+                  <Route path="*"        element={<Navigate to="/" replace />} />
+                </Routes>
+              </ChatbotProvider>
+            </CampusDataProvider>
           </AuthProvider>
         </ThemeProvider>
       </TenantProvider>

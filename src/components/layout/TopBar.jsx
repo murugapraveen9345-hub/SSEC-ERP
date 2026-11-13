@@ -59,6 +59,50 @@ export default function TopBar({ collapsed, onMenuClick }) {
 
       {/* Actions */}
       <div className="topbar-actions">
+        {/* Quick 1-Click Role Switcher */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '10px',
+            padding: '2px',
+            gap: 2,
+          }}
+          title="Quick 1-Click Role Switcher"
+        >
+          {[
+            { role: ROLES.ADMIN, label: 'Admin', icon: '👨‍💼', color: '#10b981' },
+            { role: ROLES.FACULTY, label: 'Faculty', icon: '👨‍🏫', color: '#0ea5e9' },
+            { role: ROLES.STUDENT, label: 'Student', icon: '🎓', color: '#6366f1' },
+          ].map((r) => {
+            const isActive = user?.role === r.role;
+            return (
+              <button
+                key={r.role}
+                onClick={() => { switchRole(r.role); navigate('/dashboard'); }}
+                style={{
+                  border: 'none',
+                  background: isActive ? r.color : 'transparent',
+                  color: isActive ? '#fff' : 'var(--text-secondary)',
+                  padding: '4px 10px',
+                  borderRadius: '8px',
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span>{r.icon}</span> {r.label}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Multi-Campus Selector */}
         <div
           style={{
